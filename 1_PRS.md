@@ -11,14 +11,17 @@ Genetic profiles to test were determined based on previous associations to PD an
 require(data.table)
 require(pROC)
 
-RBD_FDR <- fread("rbd_meta_fdr_adjusted.profile", header = T)
+RBD_FDR <- fread("fdr.rbd_wtccc.prsice.best.txt", header = T)
 RBD_FDR <- subset(RBD_FDR, PHENO != -9)
 RBD_FDR$PHENOT <-ifelse(RBD_FDR$PHENO==1, "CONTROL", ifelse(RBD_FDR$PHENO==2,"RBD", NA))
 
-rocAuc <- roc(RBD_FDR$PHENO, RBD_FDR$SCORE)
-auc(rocAuc) # 0.662
-ci(rocAuc, of="auc") # 0.637-0.685 (DeLong)
-coords(rocAuc, "best") # threshold: 0.00266 # specificity: 0.60 # sensitivity: 0.66
+nrow(subset(RBD_FDR, Pheno==1)) # 1265
+nrow(subset(RBD_FDR, Pheno==2)) # 212
+
+rocAuc <- roc(RBD_FDR$Pheno, RBD_FDR$Z)
+auc(rocAuc) # 0.6143
+ci(rocAuc, of="auc") # 0.575-0.6536 (DeLong)
+coords(rocAuc, "best") # threshold: -0.199 # specificity: 0.4593 # sensitivity: 0.73
 thresh <- coords(rocAuc, "best")[1]
 ```
 
@@ -48,7 +51,7 @@ coords(rocAuc, "best") # threshold: 0.0004375 # specificity: 0.53 # sensitivity:
 ```R
 png("ROC-compare_RBD-FDR_PRS.png", width = 6.5, height = 4.8, units = "in", res = 300)
 
-rocobj <- plot.roc(RBD_FDR$PHENOT, RBD_FDR$SCORE,  main="ROC curve: RBD Polygenic Risk Score",
+rocobj <- plot.roc(RBD_FDR$PHENOT, RBD_FDR$Z,  main="ROC curve: RBD Polygenic Risk Score",
                    percent=FALSE,  ci=TRUE, print.auc=TRUE, print.auc.x = .3, print.auc.y = .6, col = "darkred")
 
 rocobj <- plot.roc(PDwRBD$PHENO, PDwRBD$SCORE,  main="ROC curve: PD +/- RBD vs controls: RBD Profile",
@@ -69,6 +72,8 @@ dev.off()
 
 ### Quartile analysis
 ```R
+require(broom)
+
 RBD_FDR <- subset(RBD_FDR, PHENO != -9)
 
 RBD_FDR$quartile <- with(RBD_FDR, cut(SCORE, 
@@ -81,8 +86,6 @@ RBD_FDR$decile <- with(RBD_FDR, cut(SCORE,
 
 head(RBD_FDR)
 RBD_FDR$PHENO_BI = RBD_FDR$PHENO-1
-
-require(broom)
 
 fit_quar <- glm(RBD_FDR$PHENO_BI ~ as.factor(RBD_FDR$quartile), family = "binomial")
 tidy_fitq = tidy(fit_quar)
